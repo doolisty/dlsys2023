@@ -84,7 +84,7 @@ def softmax_loss(Z, y):
     ### END YOUR CODE
 
 
-def softmax_regression_epoch(X, y, theta, lr = 0.1, batch=100):
+def softmax_regression_epoch(X, y, theta, lr=0.1, batch=100):
     """ Run a single epoch of SGD for softmax regression on the data, using
     the step size lr and specified batch size.  This function should modify the
     theta matrix in place, and you should iterate through batches in X _without_
@@ -103,7 +103,19 @@ def softmax_regression_epoch(X, y, theta, lr = 0.1, batch=100):
         None
     """
     ### BEGIN YOUR CODE
-    pass
+    num_examples = X.shape[0]
+    k = theta.shape[1]
+    sr = 0  # start_row
+    while sr < num_examples:
+        batch = num_examples - sr if batch >= num_examples - sr else batch
+        Z = np.exp(X[sr:sr + batch] @ theta)
+        Z /= np.sum(Z, axis=1)[:, None]
+        Iy = np.zeros((batch, k))
+        Iy[np.arange(batch), y[sr:sr + batch]] = 1
+        grad = X[sr:sr + batch].T @ (Z - Iy) / batch
+        theta -= lr * grad
+
+        sr += batch
     ### END YOUR CODE
 
 
