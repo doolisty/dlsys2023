@@ -5,9 +5,11 @@ sys.path.append("./src")
 import mugrade
 from simple_ml import *
 try:
+    print("before import extension")
     from simple_ml_ext import *
+    print("import extension succeed")
 except:
-    pass
+    print("import simple_ml_ext failed!")
 
 
 ##############################################################################
@@ -178,7 +180,9 @@ def test_softmax_regression_epoch_cpp():
     y = np.random.randint(3, size=(50,)).astype(np.uint8)
     Theta = np.zeros((5,3), dtype=np.float32)
     dTheta = -nd.Gradient(lambda Th : softmax_loss(X@Th.reshape(5,3),y))(Theta)
+    print("before cpp")
     softmax_regression_epoch_cpp(X,y,Theta,lr=1.0,batch=50)
+    print("after cpp")
     np.testing.assert_allclose(dTheta.reshape(5,3), Theta, rtol=1e-4, atol=1e-4)
 
 

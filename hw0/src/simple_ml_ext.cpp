@@ -34,6 +34,58 @@ void softmax_regression_epoch_cpp(const float *X, const unsigned char *y,
 
     /// BEGIN YOUR CODE
 
+    /*
+        Z = np.exp(X[sr:sr + batch] @ theta)
+        Z /= np.sum(Z, axis=1)[:, None]
+        Iy = np.zeros((batch, k))
+        Iy[np.arange(batch), y[sr:sr + batch]] = 1
+        grad = X[sr:sr + batch].T @ (Z - Iy) / batch
+        theta -= lr * grad
+    */
+
+    size_t sr = 0;  // start_row
+    float *Z = new float[batch * k];  // m * k
+    printf("before while\n");
+    while (sr < m) {
+        batch = std::min(batch, m - sr);
+
+        printf("before loop 1\n");
+        // loop 1: calc (Z - Iy)
+        for (size_t i = 0; i < batch; ++i) {
+            float sum_exp_row = 0.0f;
+            for (size_t j = 0; j < k; ++j) {
+                float tmp_sum = 0.0f;
+                for (size_t idx_k = 0; idx_k < n; ++idx_k) {
+                    // Z[i][j] += batch_X[i][k] * theta[k][j]
+                    tmp_sum += X[(sr + i) * n + idx_k] * theta[idx_k * k + j];
+                }
+                float exp_val = exp(tmp_sum);
+                Z[i * k + j] = exp_val;  // write Z once
+                sum_exp_row += exp_val;
+            }
+            for (size_t j = 0; j < k; ++j) {
+                Z[i * k + j] /= sum_exp_row;  // read & write Z once
+                if ((int)y[sr + i] == j) {
+                    --Z[i * k + j];
+                }
+            }
+        }
+
+        printf("before loop 2\n");
+        // loop 2: calc grad (no need to store), update theta
+        for (size_t i = 0; i < n; ++i) {
+            for (size_t j = 0; j < k; ++j) {
+                float tmp_sum = 0.0f;
+                for (size_t idx_k = 0; idx_k < m; ++idx_k) {
+                    // grad[i][j] += X[k][i] * (Z-Iy)[k][j]
+                    tmp_sum += X[(sr + idx_k) * n + i] * Z[idx_k * k + j];
+                }
+                theta[i * k + j] -= lr * tmp_sum / batch;
+            }
+        }
+
+        sr += batch;
+    }
     /// END YOUR CODE
 }
 
