@@ -142,7 +142,31 @@ def nn_epoch(X, y, W1, W2, lr = 0.1, batch=100):
         None
     """
     ### BEGIN YOUR CODE
-    pass
+    def ReLU(A):
+        return np.maximum(0, A)
+
+    num_examples = X.shape[0]
+    d, k = W1.shape[1], W2.shape[1]
+    sr = 0  # start_row
+    while sr < num_examples:
+        batch = num_examples - sr if batch >= num_examples - sr else batch
+        Z1 = ReLU(X[sr:sr + batch] @ W1)
+        G2 = np.exp(Z1 @ W2)
+        G2 /= np.sum(G2, axis=1)[:, None]
+        Iy = np.zeros((batch, k))
+        Iy[np.arange(batch), y[sr:sr + batch]] = 1
+        G2 -= Iy
+        G1 = np.zeros((batch, d))
+        G1[Z1 > 0] = 1
+        G1 = np.multiply(G1, G2 @ W2.T)
+
+        grad1 = X[sr:sr + batch].T @ G1 / batch
+        grad2 = Z1.T @ G2 / batch
+
+        W1 -= lr * grad1
+        W2 -= lr * grad2
+
+        sr += batch
     ### END YOUR CODE
 
 
