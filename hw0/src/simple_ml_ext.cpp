@@ -45,11 +45,9 @@ void softmax_regression_epoch_cpp(const float *X, const unsigned char *y,
 
     size_t sr = 0;  // start_row
     float *Z = new float[batch * k];  // m * k
-    printf("before while\n");
     while (sr < m) {
         batch = std::min(batch, m - sr);
 
-        printf("before loop 1\n");
         // loop 1: calc (Z - Iy)
         for (size_t i = 0; i < batch; ++i) {
             float sum_exp_row = 0.0f;
@@ -71,13 +69,11 @@ void softmax_regression_epoch_cpp(const float *X, const unsigned char *y,
             }
         }
 
-        printf("before loop 2\n");
         // loop 2: calc grad (no need to store), update theta
         for (size_t i = 0; i < n; ++i) {
             for (size_t j = 0; j < k; ++j) {
                 float tmp_sum = 0.0f;
-                for (size_t idx_k = 0; idx_k < m; ++idx_k) {
-                    // grad[i][j] += X[k][i] * (Z-Iy)[k][j]
+                for (size_t idx_k = 0; idx_k < batch; ++idx_k) {
                     tmp_sum += X[(sr + idx_k) * n + i] * Z[idx_k * k + j];
                 }
                 theta[i * k + j] -= lr * tmp_sum / batch;
@@ -86,6 +82,7 @@ void softmax_regression_epoch_cpp(const float *X, const unsigned char *y,
 
         sr += batch;
     }
+    delete[] Z;
     /// END YOUR CODE
 }
 
