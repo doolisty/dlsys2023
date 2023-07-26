@@ -80,7 +80,7 @@ class PowerScalar(TensorOp):
 
     def gradient(self, out_grad, node):
         ### BEGIN YOUR SOLUTION
-        return self.scalar * array_api.multiply(out_grad, node.inputs[0] ** (self.scalar - 1))
+        return self.scalar * out_grad * node.inputs[0] ** (self.scalar - 1)
         ### END YOUR SOLUTION
 
 
@@ -99,9 +99,7 @@ class EWiseDiv(TensorOp):
     def gradient(self, out_grad, node):
         ### BEGIN YOUR SOLUTION
         lhs, rhs = node.inputs
-        grad_lhs = array_api.divide(out_grad, rhs)
-        grad_rhs = array_api.divide(array_api.multiply(out_grad, -lhs), rhs ** 2)
-        return grad_lhs, grad_rhs
+        return out_grad / rhs, out_grad * -lhs / rhs ** 2
         ### END YOUR SOLUTION
 
 
