@@ -80,7 +80,7 @@ class PowerScalar(TensorOp):
 
     def gradient(self, out_grad, node):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        return self.scalar * array_api.multiply(out_grad, node.inputs[0] ** (self.scalar - 1))
         ### END YOUR SOLUTION
 
 
@@ -98,7 +98,10 @@ class EWiseDiv(TensorOp):
 
     def gradient(self, out_grad, node):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        lhs, rhs = node.inputs
+        grad_lhs = array_api.divide(out_grad, rhs)
+        grad_rhs = array_api.divide(array_api.multiply(out_grad, -lhs), rhs ** 2)
+        return grad_lhs, grad_rhs
         ### END YOUR SOLUTION
 
 
@@ -117,7 +120,7 @@ class DivScalar(TensorOp):
 
     def gradient(self, out_grad, node):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        return out_grad / self.scalar
         ### END YOUR SOLUTION
 
 
@@ -128,22 +131,27 @@ def divide_scalar(a, scalar):
 class Transpose(TensorOp):
     def __init__(self, axes: Optional[tuple] = None):
         self.axes = axes
+    
+    def axes2perm(self, size):
+        perm = [i for i in range(size)]
+        if self.axes is None:
+            perm[-1], perm[-2] = perm[-2], perm[-1]
+        elif self.axes is not None:
+            if len(self.axes) == size:
+                perm = self.axes
+            else:
+                perm = [i for i in range(size)]
+                perm[self.axes[0]], perm[self.axes[1]] = self.axes[1], self.axes[0]
+        return perm
 
     def compute(self, a):
         ### BEGIN YOUR SOLUTION
-        perm_shape = [i for i in range(len(a.shape))]
-        if self.axes is None:
-            perm_shape[-1], perm_shape[-2] = perm_shape[-2], perm_shape[-1]
-        elif self.axes is not None and len(self.axes) != len(a.shape):
-            perm_shape = [i for i in range(len(a.shape))]
-            perm_shape[self.axes[0]], perm_shape[self.axes[1]] = self.axes[1], self.axes[0]
-        perm_shape = tuple(perm_shape)
-        return array_api.transpose(a, axes=perm_shape)
+        return array_api.transpose(a, axes=self.axes2perm(len(a.shape)))
         ### END YOUR SOLUTION
 
     def gradient(self, out_grad, node):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        return out_grad.transpose(self.axes2perm(len(node.inputs[0].shape)))
         ### END YOUR SOLUTION
 
 
@@ -162,7 +170,7 @@ class Reshape(TensorOp):
 
     def gradient(self, out_grad, node):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        return out_grad.reshape(node.inputs[0].shape)
         ### END YOUR SOLUTION
 
 
@@ -214,7 +222,17 @@ class MatMul(TensorOp):
 
     def gradient(self, out_grad, node):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        def default_transpose_perm(size):
+            perm = [i for i in range(size)]
+            perm[-2], perm[-1] = perm[-1], perm[-2]
+            return tuple(perm)
+
+        # Y = XW
+        # X' = Y'(W^T)  (lhs)
+        # W' = (X^T)Y'  (rhs)
+        lhs, rhs = node.inputs
+        return out_grad.matmul(rhs.transpose()), lhs.transpose().matmul(out_grad)
+
         ### END YOUR SOLUTION
 
 
@@ -230,7 +248,7 @@ class Negate(TensorOp):
 
     def gradient(self, out_grad, node):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        return -out_grad
         ### END YOUR SOLUTION
 
 
@@ -246,7 +264,7 @@ class Log(TensorOp):
 
     def gradient(self, out_grad, node):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        return array_api.divide(array_api.ones_like(out_grad), out_grad)
         ### END YOUR SOLUTION
 
 
@@ -262,7 +280,7 @@ class Exp(TensorOp):
 
     def gradient(self, out_grad, node):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        return array_api.exp(out_grad)
         ### END YOUR SOLUTION
 
 
