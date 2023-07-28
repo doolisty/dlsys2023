@@ -206,6 +206,7 @@ class BroadcastTo(TensorOp):
         # padding 1s for dim alignment
         if need_reshape:
             out_grad = out_grad.reshape(input_shape)
+
         return out_grad
         ### END YOUR SOLUTION
 
@@ -265,10 +266,6 @@ class MatMul(TensorOp):
 
     def gradient(self, out_grad, node):
         ### BEGIN YOUR SOLUTION
-        def default_transpose_perm(size):
-            perm = [i for i in range(size)]
-            perm[-2], perm[-1] = perm[-1], perm[-2]
-            return tuple(perm)
 
         # Y = XW
         # X' = Y'(W^T)  (lhs)
@@ -281,8 +278,8 @@ class MatMul(TensorOp):
             lhs_grad = lhs_grad.sum(axes=tuple([i for i in range(len(lhs_grad.shape) - len(lhs.shape))]))
         if len(rhs.shape) < len(rhs_grad.shape):
             rhs_grad = rhs_grad.sum(axes=tuple([i for i in range(len(rhs_grad.shape) - len(rhs.shape))]))
-        return lhs_grad, rhs_grad
 
+        return lhs_grad, rhs_grad
         ### END YOUR SOLUTION
 
 
