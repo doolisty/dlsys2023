@@ -185,7 +185,28 @@ class BroadcastTo(TensorOp):
 
     def gradient(self, out_grad, node):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        input_shape = node.inputs[0].shape
+        sum_axes = []
+
+        # Since summation will eliminate a dim, we need to recover it by reshape
+        need_reshape = False
+
+        # record axes for additional dims
+        offset = len(self.shape) - len(input_shape)  # number of additional dims
+        for axis in range(offset):
+            sum_axes.append(axis)
+
+        # record axes who conducted (1 => shape) in fwd
+        for axis in range(len(input_shape)):
+            if input_shape[axis] < self.shape[offset + axis]:
+                need_reshape = True
+                sum_axes.append(offset + axis)
+        out_grad = out_grad.sum(axes=tuple(sum_axes))  # no need to divide
+
+        # padding 1s for dim alignment
+        if need_reshape:
+            out_grad = out_grad.reshape(input_shape)
+        return out_grad
         ### END YOUR SOLUTION
 
 
@@ -204,7 +225,31 @@ class Summation(TensorOp):
 
     def gradient(self, out_grad, node):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        def get_nonzero(lst):
+            ret = []
+            for elm in lst:
+                if elm != 0:
+                    ret.append(elm)
+            return ret
+
+        input_shape = node.inputs[0].shape
+        shape_lst = [input_shape[i] if i not in self.axes else 0 for i in range(len(input_shape))]
+        for axis in self.axes[::-1]:
+            shape_lst[axis] = input_shape[axis]
+            curr_shape = get_nonzero(shape_lst)
+
+            # yzhao: Op 'broadcast_to' supports expand externally not internally.
+            #       To cope with expanding dim internally (append a dim to the shape),
+            #       we need to transpose the last 2 dims, expand, then transpose them back.
+            need_transpose = False
+            if axis >= len(out_grad.shape) and len(curr_shape) > 1:
+                curr_shape[-2], curr_shape[-1] = curr_shape[-1], curr_shape[-2]
+                need_transpose = True
+            out_grad = out_grad.broadcast_to(curr_shape)  # no need to divide
+            if need_transpose:
+                out_grad = out_grad.transpose()
+
+        return out_grad
         ### END YOUR SOLUTION
 
 
@@ -229,7 +274,14 @@ class MatMul(TensorOp):
         # X' = Y'(W^T)  (lhs)
         # W' = (X^T)Y'  (rhs)
         lhs, rhs = node.inputs
-        return out_grad.matmul(rhs.transpose()), lhs.transpose().matmul(out_grad)
+        lhs_grad, rhs_grad = out_grad.matmul(rhs.transpose()), lhs.transpose().matmul(out_grad)
+
+        # sum over batches
+        if len(lhs.shape) < len(lhs_grad.shape):
+            lhs_grad = lhs_grad.sum(axes=tuple([i for i in range(len(lhs_grad.shape) - len(lhs.shape))]))
+        if len(rhs.shape) < len(rhs_grad.shape):
+            rhs_grad = rhs_grad.sum(axes=tuple([i for i in range(len(rhs_grad.shape) - len(rhs.shape))]))
+        return lhs_grad, rhs_grad
 
         ### END YOUR SOLUTION
 
