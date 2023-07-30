@@ -234,6 +234,8 @@ class Summation(TensorOp):
             return ret
 
         input_shape = node.inputs[0].shape
+        if not self.axes:
+            self.axes = [i for i in range(len(input_shape))]
         shape_lst = [input_shape[i] if i not in self.axes else 0 for i in range(len(input_shape))]
         for axis in self.axes[::-1]:
             shape_lst[axis] = input_shape[axis]
