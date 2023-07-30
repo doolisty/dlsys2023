@@ -30,7 +30,18 @@ def parse_mnist(image_filesname, label_filename):
                 for MNIST will contain the values 0-9.
     """
     ### BEGIN YOUR SOLUTION
-    raise NotImplementedError()
+    image_size = 28
+    image_num = 60000
+    with gzip.open(image_filesname, "r") as f:
+        f.read(16)
+        image_arr = np.frombuffer(f.read(), dtype=np.uint8).astype(np.float32)
+    with gzip.open(label_filename, "r") as f:
+        f.read(8)
+        label_arr = np.frombuffer(f.read(), dtype=np.uint8)
+    image_arr.resize(image_num, image_size ** 2)
+    image_arr -= np.min(image_arr)
+    image_arr /= np.max(image_arr)
+    return (image_arr, label_arr)
     ### END YOUR SOLUTION
 
 
@@ -51,7 +62,16 @@ def softmax_loss(Z, y_one_hot):
         Average softmax loss over the sample. (ndl.Tensor[np.float32])
     """
     ### BEGIN YOUR SOLUTION
-    raise NotImplementedError()
+    # print(f"Z.shape = {Z.shape}")
+    # print(f"y_one_hot.shape = {y_one_hot.shape}")
+    # print(y_one_hot)
+    # lhs = Z.exp().sum((1)).log()
+    # rhs = (Z * y_one_hot).sum((1))
+    # # print(f"lhs.shape = {lhs.shape}")
+    # # print(f"rhs.shape = {rhs.shape}")
+    # return (lhs - rhs).sum() / Z.shape[0]
+    return (Z.exp().sum((1)).log() - (Z * y_one_hot).sum((1))).sum() / Z.shape[0]
+    # return np.mean(np.log(np.sum(np.exp(Z), axis=1)) - y)
     ### END YOUR SOLUTION
 
 

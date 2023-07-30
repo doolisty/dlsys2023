@@ -376,6 +376,12 @@ class Tensor(Value):
     def transpose(self, axes=None):
         return needle.ops.Transpose(axes)(self)
 
+    def log(self):
+        return needle.ops.Log()(self)
+
+    def exp(self):
+        return needle.ops.Exp()(self)
+
     __radd__ = __add__
     __rmul__ = __mul__
     __rsub__ = __sub__
@@ -399,11 +405,11 @@ def compute_gradient_of_variables(output_tensor, out_grad):
 
     ### BEGIN YOUR SOLUTION
     for node in reverse_topo_order:
-        grad = sum([x if type(x) is Tensor else x[0] for x in node_to_output_grads_list[node]])
+        grad = sum([x if isinstance(x, Tensor) else x[0] for x in node_to_output_grads_list[node]])
         node.grad = grad
         if node.op is not None:
             bp_grad = node.op.gradient(grad, node)
-            bp_grad = bp_grad if type(bp_grad) is tuple else tuple([bp_grad])
+            bp_grad = bp_grad if isinstance(bp_grad, tuple) else tuple([bp_grad])
             for i in range(len(node.inputs)):
                 prev_node = node.inputs[i]
                 if prev_node not in node_to_output_grads_list:

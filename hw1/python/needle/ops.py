@@ -217,7 +217,7 @@ def broadcast_to(a, shape):
 
 class Summation(TensorOp):
     def __init__(self, axes: Optional[tuple] = None):
-        self.axes = axes
+        self.axes = tuple([axes]) if isinstance(axes, int) else axes
 
     def compute(self, a):
         ### BEGIN YOUR SOLUTION
@@ -313,7 +313,7 @@ class Log(TensorOp):
 
     def gradient(self, out_grad, node):
         ### BEGIN YOUR SOLUTION
-        return array_api.divide(array_api.ones_like(out_grad), out_grad)
+        return out_grad * node.inputs[0] ** -1
         ### END YOUR SOLUTION
 
 
@@ -329,7 +329,7 @@ class Exp(TensorOp):
 
     def gradient(self, out_grad, node):
         ### BEGIN YOUR SOLUTION
-        return array_api.exp(out_grad)
+        return out_grad * node.inputs[0].exp()
         ### END YOUR SOLUTION
 
 
