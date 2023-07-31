@@ -100,7 +100,37 @@ def nn_epoch(X, y, W1, W2, lr = 0.1, batch=100):
     """
 
     ### BEGIN YOUR SOLUTION
-    raise NotImplementedError()
+    num_examples = X.shape[0]
+    k = W2.shape[1]
+    sr = 0  # start_row
+    while sr < num_examples:
+        batch = min(batch, num_examples - sr)
+        tensor_X = ndl.Tensor(X[sr:sr + batch])
+        Iy = np.zeros((batch, k))
+        Iy[np.arange(batch), y[sr:sr + batch]] = 1
+        tensor_Iy = ndl.Tensor(Iy)
+
+        tmp_Z1 = tensor_X @ W1
+        Z1 = tmp_Z1.relu()
+        G2 = (Z1 @ W2).exp()
+        # broadcast outside sum, need to first expand inside then transpose
+        def transpose_shape(shape):
+            shape_lst = list(shape)
+            shape_lst[-2], shape_lst[-1] = shape_lst[-1], shape_lst[-2]
+            return tuple(shape_lst)
+        G2 /= G2.sum(1).broadcast_to(transpose_shape(G2.shape)).transpose()
+        G2 -= tensor_Iy
+        G1 = Z1 / tmp_Z1
+        G1 = G1 * (G2 @ W2.transpose())
+
+        grad1 = tensor_X.transpose() @ G1 / batch
+        grad2 = Z1.transpose() @ G2 / batch
+
+        W1 -= lr * grad1
+        W2 -= lr * grad2
+
+        sr += batch
+    return (W1, W2)
     ### END YOUR SOLUTION
 
 

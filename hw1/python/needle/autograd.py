@@ -381,6 +381,9 @@ class Tensor(Value):
 
     def exp(self):
         return needle.ops.Exp()(self)
+    
+    def relu(self):
+        return needle.ops.ReLU()(self)
 
     __radd__ = __add__
     __rmul__ = __mul__

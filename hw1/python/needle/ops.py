@@ -273,7 +273,7 @@ class MatMul(TensorOp):
         # X' = Y'(W^T)  (lhs)
         # W' = (X^T)Y'  (rhs)
         lhs, rhs = node.inputs
-        lhs_grad, rhs_grad = out_grad.matmul(rhs.transpose()), lhs.transpose().matmul(out_grad)
+        lhs_grad, rhs_grad = out_grad @ rhs.transpose(), lhs.transpose() @ out_grad
 
         # sum over batches
         if len(lhs.shape) < len(lhs_grad.shape):
@@ -346,7 +346,7 @@ class ReLU(TensorOp):
 
     def gradient(self, out_grad, node):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        return out_grad * (Tensor(node.realize_cached_data()) / node.inputs[0])
         ### END YOUR SOLUTION
 
 
