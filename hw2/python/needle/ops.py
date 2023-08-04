@@ -239,6 +239,8 @@ class BroadcastTo(TensorOp):
         self.shape = shape
 
     def compute(self, a):
+        print(f"[in BroadcastTo] a.shape = {a.shape}")
+        print(f"[in BroadcastTo] self.shape = {self.shape}")
         return array_api.broadcast_to(a, self.shape)
 
     def gradient(self, out_grad, node):
@@ -291,24 +293,42 @@ class Summation(TensorOp):
                     ret.append(elm)
             return ret
 
+        def get_periods(axes):
+            periods, tmp = [], []
+            n = len(axes)
+            for i in range(n):
+                tmp.append(axes[i])
+                if i != n-1 and axes[i] + 1 < axes[i+1]:
+                    periods.append(tmp)
+                    tmp = []
+            periods.append(tmp)
+            return periods
+
         input_shape = node.inputs[0].shape
         if not self.axes:
             self.axes = [i for i in range(len(input_shape))]
         shape_lst = [input_shape[i] if i not in self.axes else 0 for i in range(len(input_shape))]
-        for axis in self.axes[::-1]:
-            shape_lst[axis] = input_shape[axis]
-            curr_shape = get_nonzero(shape_lst)
 
+        # get all non-contiguous periods of axes
+        periods = get_periods(self.axes)
+        for period in periods[::-1]:
             # yzhao: Op 'broadcast_to' supports expand externally not internally.
             #       To cope with expanding dim internally (append a dim to the shape),
             #       we need to transpose the last 2 dims, expand, then transpose them back.
             need_transpose = False
-            if axis >= len(out_grad.shape) and len(curr_shape) > 1:
-                curr_shape[-2], curr_shape[-1] = curr_shape[-1], curr_shape[-2]
+
+            # Only the last period need to be inserted internally, i.e., to be transposed.
+            # An exception is when all axes of input are summed up.
+            if period[-1] == len(input_shape) - 1 and period[0] != 0:
                 need_transpose = True
-            out_grad = out_grad.broadcast_to(curr_shape)  # no need to divide
-            if need_transpose:
-                out_grad = out_grad.transpose()
+            for axis in period[::-1]:
+                shape_lst[axis] = input_shape[axis]
+                curr_shape = get_nonzero(shape_lst)
+                if need_transpose and len(curr_shape) > 1:
+                    curr_shape[-2], curr_shape[-1] = curr_shape[-1], curr_shape[-2]
+                out_grad = out_grad.broadcast_to(curr_shape)  # no need to divide
+                if need_transpose and len(curr_shape) > 1:
+                    out_grad = out_grad.transpose()
 
         return out_grad
         ### END YOUR SOLUTION
