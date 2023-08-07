@@ -239,8 +239,6 @@ class BroadcastTo(TensorOp):
         self.shape = shape
 
     def compute(self, a):
-        print(f"[in BroadcastTo] a.shape = {a.shape}")
-        print(f"[in BroadcastTo] self.shape = {self.shape}")
         return array_api.broadcast_to(a, self.shape)
 
     def gradient(self, out_grad, node):
@@ -286,51 +284,11 @@ class Summation(TensorOp):
 
     def gradient(self, out_grad, node):
         ### BEGIN YOUR SOLUTION
-        def get_nonzero(lst):
-            ret = []
-            for elm in lst:
-                if elm != 0:
-                    ret.append(elm)
-            return ret
-
-        def get_periods(axes):
-            periods, tmp = [], []
-            n = len(axes)
-            for i in range(n):
-                tmp.append(axes[i])
-                if i != n-1 and axes[i] + 1 < axes[i+1]:
-                    periods.append(tmp)
-                    tmp = []
-            periods.append(tmp)
-            return periods
-
         input_shape = node.inputs[0].shape
-        if not self.axes:
+        if self.axes is None:
             self.axes = [i for i in range(len(input_shape))]
-        shape_lst = [input_shape[i] if i not in self.axes else 0 for i in range(len(input_shape))]
-
-        # get all non-contiguous periods of axes
-        periods = get_periods(self.axes)
-        for period in periods[::-1]:
-            # yzhao: Op 'broadcast_to' supports expand externally not internally.
-            #       To cope with expanding dim internally (append a dim to the shape),
-            #       we need to transpose the last 2 dims, expand, then transpose them back.
-            need_transpose = False
-
-            # Only the last period need to be inserted internally, i.e., to be transposed.
-            # An exception is when all axes of input are summed up.
-            if period[-1] == len(input_shape) - 1 and period[0] != 0:
-                need_transpose = True
-            for axis in period[::-1]:
-                shape_lst[axis] = input_shape[axis]
-                curr_shape = get_nonzero(shape_lst)
-                if need_transpose and len(curr_shape) > 1:
-                    curr_shape[-2], curr_shape[-1] = curr_shape[-1], curr_shape[-2]
-                out_grad = out_grad.broadcast_to(curr_shape)  # no need to divide
-                if need_transpose and len(curr_shape) > 1:
-                    out_grad = out_grad.transpose()
-
-        return out_grad
+        reshape_target = [input_shape[i] if i not in self.axes else 1 for i in range(len(input_shape))]
+        return out_grad.reshape(tuple(reshape_target)).broadcast_to(input_shape)
         ### END YOUR SOLUTION
 
 
@@ -423,7 +381,9 @@ class ReLU(TensorOp):
 
     def gradient(self, out_grad, node):
         ### BEGIN YOUR SOLUTION
-        return out_grad * (Tensor(node.realize_cached_data()) / node.inputs[0])
+        out_ndarray = node.realize_cached_data()
+        out_ndarray[out_ndarray > 0] = 1
+        return out_grad * Tensor(out_ndarray)
         ### END YOUR SOLUTION
 
 
@@ -434,16 +394,30 @@ def relu(a):
 
 class LogSumExp(TensorOp):
     def __init__(self, axes: Optional[tuple] = None):
-        self.axes = axes
+        self.axes = tuple([axes]) if isinstance(axes, int) else axes
 
     def compute(self, Z):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        self.maxvals = array_api.max(Z, axis=self.axes)
+        # self.maxvals_keepdim_bc = array_api.broadcast_to(array_api.max(Z, axis=self.axes, keepdims=True), Z.shape)
+        self.maxvals_keepdim_bc = array_api.max(Z, axis=self.axes, keepdims=True)  # 不做broadcast_to也可以计算
+        return array_api.log(array_api.sum(array_api.exp(Z - self.maxvals_keepdim_bc), axis=self.axes)) + self.maxvals
         ### END YOUR SOLUTION
 
     def gradient(self, out_grad, node):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+
+        # 从函数外层到内层逐层传播，逐层应用 outgrad * grad(input)
+        input_tensor = node.inputs[0]
+        maxval_tensor = Tensor(node.inputs[0].realize_cached_data().max(axis=self.axes, keepdims=True))
+        exp_Z = (input_tensor - maxval_tensor).exp()  # the same as its derivative
+        log_func_derivative = exp_Z.sum(self.axes) ** -1
+        log_prop_grad = out_grad * log_func_derivative
+        if self.axes is None:
+            self.axes = [i for i in range(len(input_tensor.shape))]
+        reshape_target = [input_tensor.shape[i] if i not in self.axes else 1 for i in range(len(input_tensor.shape))]
+        exp_prop_grad = exp_Z * log_prop_grad.reshape(tuple(reshape_target)).broadcast_to(input_tensor.shape)
+        return exp_prop_grad
         ### END YOUR SOLUTION
 
 
