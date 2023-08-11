@@ -436,7 +436,7 @@ def compute_gradient_of_variables(output_tensor, out_grad):
 
     ### BEGIN YOUR SOLUTION
     for node in reverse_topo_order:
-        grad = sum([x if isinstance(x, Tensor) else x[0] for x in node_to_output_grads_list[node]])
+        grad = sum_node_list(node_to_output_grads_list[node])
         node.grad = grad
         if node.op is not None:
             bp_grad = node.op.gradient(grad, node)
