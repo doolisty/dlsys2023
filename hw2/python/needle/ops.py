@@ -171,7 +171,7 @@ class DivScalar(TensorOp):
 
     def compute(self, a):
         ### BEGIN YOUR SOLUTION
-        return a / self.scalar
+        return (a / self.scalar).astype(array_api.float32)
         ### END YOUR SOLUTION
 
     def gradient(self, out_grad, node):
