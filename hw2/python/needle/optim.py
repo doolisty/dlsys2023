@@ -25,7 +25,15 @@ class SGD(Optimizer):
 
     def step(self):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        for p in self.params:
+            grad = p.grad.data
+            if self.weight_decay > 0:
+                grad += self.weight_decay * p
+            if p not in self.u.keys():
+                self.u[p] = (1 - self.momentum) * grad
+            else:
+                self.u[p] = self.momentum * self.u[p] + (1 - self.momentum) * grad
+            p.data = p - self.lr * self.u[p]
         ### END YOUR SOLUTION
 
 
