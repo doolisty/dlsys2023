@@ -144,7 +144,6 @@ class DataLoader:
         if not self.shuffle:
             self.ordering = np.array_split(np.arange(len(dataset)), 
                                            range(batch_size, len(dataset), batch_size))
-        self.idx = 0
 
     def __iter__(self):
         ### BEGIN YOUR SOLUTION
@@ -155,17 +154,20 @@ class DataLoader:
             np_range = np.array(range_list)
             self.ordering = np.array_split(np_range, 
                                            range(self.batch_size, len(self.dataset), self.batch_size))
+            # A more concise solution
+            # self.ordering = np.array_split(np.random.permutation(len(self.dataset)),
+            #                                range(self.batch_size, len(self.dataset), self.batch_size))
+        self.idx = 0
         ### END YOUR SOLUTION
         return self
 
     def __next__(self):
         ### BEGIN YOUR SOLUTION
-        if self.idx < len(self.ordering):
-            ret = self.dataset[self.ordering[self.idx]]
-            self.idx += 1
-            return (Tensor(ret[0]), Tensor(ret[1]))
-        else:
+        if self.idx >= len(self.ordering):
             raise StopIteration
+        ret = self.dataset[self.ordering[self.idx]]
+        self.idx += 1
+        return (Tensor(ret[0]), Tensor(ret[1]))
         ### END YOUR SOLUTION
 
 
