@@ -49,9 +49,10 @@ def parse_mnist(image_filename, label_filename):
     """
     ### BEGIN YOUR CODE
     image_size = 28
-    image_num = 60000
     with gzip.open(image_filename, "r") as f:
-        f.read(16)
+        f.read(4)
+        image_num = int.from_bytes(f.read(4), byteorder="big")
+        f.read(8)
         image_arr = np.frombuffer(f.read(), dtype=np.uint8).astype(np.float32)
     with gzip.open(label_filename, "r") as f:
         f.read(8)
