@@ -144,9 +144,9 @@ class BatchNorm1d(Module):
         self.momentum = momentum
         ### BEGIN YOUR SOLUTION
         self.weight = Parameter(init.ones(dim, device=device, dtype=dtype))
-        self.bias = Parameter(init.zeros(1, device=device, dtype=dtype))
-        self.running_mean = Parameter(init.zeros(dim, device=device, dtype=dtype))
-        self.running_var = Parameter(init.ones(dim, device=device, dtype=dtype))
+        self.bias = Parameter(init.zeros(dim, device=device, dtype=dtype))
+        self.running_mean = init.zeros(dim, device=device, dtype=dtype)
+        self.running_var = init.ones(dim, device=device, dtype=dtype)
         ### END YOUR SOLUTION
 
 
@@ -154,16 +154,16 @@ class BatchNorm1d(Module):
         ### BEGIN YOUR SOLUTION
         if not self.training:
             mean = self.running_mean.reshape((1, self.dim)).broadcast_to(x.shape)
-            std_var = ((var + self.eps) ** (1/2)).reshape((1, self.dim)).broadcast_to(x.shape)
-            return (x - mean) / std_var
+            std_var = ((self.running_var + self.eps) ** (1/2)).reshape((1, self.dim)).broadcast_to(x.shape)
+            return self.weight.broadcast_to(x.shape) * (x - mean) / std_var + self.bias.broadcast_to(x.shape)
         batch_size = x.shape[0]
         mean = x.sum(0) / batch_size
-        self.running_mean = (1 - self.momentum) * self.running_mean + self.momentum * mean
+        self.running_mean.data = (1 - self.momentum) * self.running_mean + self.momentum * mean
         mean = mean.reshape((1, self.dim)).broadcast_to(x.shape)
         var = ((x - mean) ** 2).sum(0) / batch_size
-        self.running_var = (1 - self.momentum) * self.running_var + self.momentum * var
+        self.running_var.data = (1 - self.momentum) * self.running_var + self.momentum * var
         std_var = ((var + self.eps) ** (1/2)).reshape((1, self.dim)).broadcast_to(x.shape)
-        return self.weight.broadcast_to(x.shape) * ((x - mean) / std_var) + self.bias.broadcast_to((1, self.dim))
+        return self.weight.broadcast_to(x.shape) * ((x - mean) / std_var) + self.bias.broadcast_to(x.shape)
         ### END YOUR SOLUTION
 
 
@@ -174,7 +174,7 @@ class LayerNorm1d(Module):
         self.eps = eps
         ### BEGIN YOUR SOLUTION
         self.weight = Parameter(init.ones(dim, device=device, dtype=dtype))
-        self.bias = Parameter(init.zeros(1, device=device, dtype=dtype))
+        self.bias = Parameter(init.zeros(dim, device=device, dtype=dtype))
         ### END YOUR SOLUTION
 
     def forward(self, x: Tensor) -> Tensor:
@@ -183,7 +183,7 @@ class LayerNorm1d(Module):
         # Still needs broadcast_to(x.shape) to ensure the bwd being correct.
         mean = (x.sum(1) / self.dim).reshape((batch_size, 1)).broadcast_to(x.shape)
         std_var = ((((x - mean) ** 2).sum(1) / self.dim + self.eps) ** (1/2)).reshape((batch_size, 1)).broadcast_to(x.shape)
-        return self.weight.broadcast_to(x.shape) * ((x - mean) / std_var) + self.bias.broadcast_to((batch_size, 1))
+        return self.weight.broadcast_to(x.shape) * ((x - mean) / std_var) + self.bias.broadcast_to(x.shape)
         ### END YOUR SOLUTION
 
 
