@@ -439,14 +439,11 @@ def compute_gradient_of_variables(output_tensor, out_grad):
         grad = sum_node_list(node_to_output_grads_list[node])
         node.grad = grad
         if node.op is not None:
-            bp_grad = node.op.gradient(grad, node)
-            bp_grad = bp_grad if isinstance(bp_grad, tuple) else tuple([bp_grad])
-            for i in range(len(node.inputs)):
-                prev_node = node.inputs[i]
+            bp_grad_tuple = node.op.gradient_as_tuple(grad, node)
+            for prev_node, prev_grad in zip(node.inputs, bp_grad_tuple):
                 if prev_node not in node_to_output_grads_list:
                     node_to_output_grads_list[prev_node] = []
-                node_to_output_grads_list[prev_node].append(bp_grad[i])
-    return reverse_topo_order[-1].grad
+                node_to_output_grads_list[prev_node].append(prev_grad)
     ### END YOUR SOLUTION
 
 
@@ -462,6 +459,8 @@ def find_topo_sort(node_list: List[Value]) -> List[Value]:
     visited = set()
     topo_order = []
     for node in node_list:
+        if node in visited:
+            continue
         visited.add(node)
         topo_sort_dfs(node, visited, topo_order)
     return topo_order
