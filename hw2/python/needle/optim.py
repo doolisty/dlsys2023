@@ -27,8 +27,7 @@ class SGD(Optimizer):
         ### BEGIN YOUR SOLUTION
         for p in self.params:
             grad = p.grad.data
-            if self.weight_decay > 0:
-                grad += self.weight_decay * p
+            grad += self.weight_decay * p.data
             if p not in self.u.keys():
                 self.u[p] = (1 - self.momentum) * grad
             else:
@@ -60,5 +59,19 @@ class Adam(Optimizer):
 
     def step(self):
         ### BEGIN YOUR SOLUTION
-        raise NotImplementedError()
+        self.t += 1
+        for p in self.params:
+            grad = p.grad.data
+            grad += self.weight_decay * p.data
+            if p not in self.m.keys():
+                self.m[p] = (1 - self.beta1) * grad
+            else:
+                self.m[p] = self.beta1 * self.m[p] + (1 - self.beta1) * grad
+            if p not in self.v.keys():
+                self.v[p] = (1 - self.beta2) * grad ** 2
+            else:
+                self.v[p] = self.beta2 * self.v[p] + (1 - self.beta2) * grad ** 2
+            # bc = bias correction
+            m_bc, v_bc = self.m[p] / (1 - self.beta1 ** self.t), self.v[p] / (1 - self.beta2 ** self.t)
+            p.data = p - self.lr * m_bc / (v_bc ** (1/2) + self.eps)
         ### END YOUR SOLUTION
